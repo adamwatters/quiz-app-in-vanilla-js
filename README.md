@@ -1,0 +1,1 @@
+learning to appreciate jQuery by not using it
