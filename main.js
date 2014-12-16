@@ -2,27 +2,47 @@
 
 	var Session = function () {
 		var self = this;
-		var button = document.getElementById('nextButton');
-		button.addEventListener('click', function() {
+
+		var backButton = document.getElementById('back-button');
+			backButton.addEventListener('click', function() {
+			self.handleBackClick();
+		});
+		var nextButton = document.getElementById('next-button');
+		nextButton.addEventListener('click', function() {
 			self.handleNextClick();
 		});
+
 		this.questionHolder = document.getElementById('question-holder');
 		
 		this.radios = [];
 		this.choices = [];
 
 		this.quiz = new Quiz();
+		$(this.questionHolder).fadeIn(300);
 		this.renderQuestionPage();
 	};
 
 	Session.prototype = {
+		handleBackClick: function() {
+			event.preventDefault();
+			if (this.choicePicked()) {
+				this.quiz.saveChoice(this.quiz.activeQ, this.getChoice())
+			}
+			console.log(this.quiz.answerLog);
+			if (this.quiz.hasPreviousQ()) {
+				this.quiz.previousQ();
+				this.updateViewQuestion();
+			}
+
+		},
 		handleNextClick: function() {
 			event.preventDefault();
 			if (this.choicePicked()) {
-				this.quiz.saveChoice(this.getChoice());
+				this.quiz.saveChoice(this.quiz.activeQ, this.getChoice());
+				console.log(this.quiz.answerLog);
 				if (this.quiz.hasNextQ()) {
 					this.quiz.nextQ();
-					this.updateViewQ();
+					this.updateViewQuestion();
 				} else {
 					this.updateViewScore();
 				}
@@ -40,15 +60,24 @@
 				}
 			}
 		},
-		updateViewQ: function() {
-			this.clearQ();
-			this.renderQuestionPage();
+		updateViewQuestion: function() {
+			var self = this;
+			$(this.questionHolder).fadeOut(300, function(){
+				self.clearQuestion();
+				self.renderQuestionPage();
+				$(self.questionHolder).fadeIn(300)
+			});
 		},
 		updateViewScore: function() {
-			this.clearNextButton();
-			this.renderScorePage();
+			var self = this;
+				$(this.questionHolder).fadeOut(300, function(){
+					self.clearQuestion();
+					self.clearNextButton();
+					self.renderScorePage();
+					$(self.questionHolder).fadeIn(500);
+			});
 		},
-		clearQ: function() {
+		clearQuestion: function() {
 			var question = document.getElementsByClassName('question');
 			var radios = document.getElementsByClassName('radio');
 			var choices = document.getElementsByClassName('choice');
@@ -63,26 +92,31 @@
 			this.choices = [];
 		},
 		clearNextButton: function() {
-			var form = document.getElementById('question-holder');
-			document.body.removeChild(form);
+			var nextButton = document.getElementById('next-button');
+			var backButton = document.getElementById('back-button');
+			this.questionHolder.removeChild(nextButton);
+			this.questionHolder.removeChild(backButton);
 		},
 		renderQuestion: function() {
 			var problem = this.quiz.questions[this.quiz.activeQ];
 			var question = document.createElement('h2');
 			question.setAttribute('class', 'question');
-			var questionText = document.createTextNode(problem.question);
+			var questionText = document.createTextNode("Question " + (this.quiz.activeQ + 1) + " of " + this.quiz.questions.length + ": " + problem.question);
 			question.appendChild(questionText);
 			this.questionHolder.appendChild(question);
 		},
-		renderChoice: function(i) {
+		renderRadio: function(i) {
 			this.radios.push(document.createElement('input'));
 			this.radios[i].setAttribute('type', 'radio');
 			this.radios[i].setAttribute('class', 'radio');
 			this.radios[i].setAttribute('name', 'choice');
 			this.radios[i].setAttribute('value', i);
-			this.questionHolder.appendChild(this.radios[i])
+			if (i === +this.quiz.answerLog[this.quiz.activeQ]) {
+				this.radios[i].setAttribute('checked', true);
+			}
+			this.questionHolder.appendChild(this.radios[i]);
 		},
-		renderRadio: function(i) {
+		renderChoice: function(i) {
 			var problem = this.quiz.questions[this.quiz.activeQ];
 			this.choices.push(document.createElement('p'));
 			this.choices[i].setAttribute('class', 'choice');
@@ -93,15 +127,15 @@
 			var problem = this.quiz.questions[this.quiz.activeQ];
 			this.renderQuestion();
 			for(var i = 0; i < problem.choices.length; i++){
-				this.renderChoice(i);
 				this.renderRadio(i);
+				this.renderChoice(i);
 			}
 		},
 		renderScorePage: function() {
 			var scoreHolder = document.createElement('h2');
-			var scoreText = document.createTextNode("your score: " + this.quiz.calculateScore());
+			var scoreText = document.createTextNode("your score: " + this.quiz.calculateScore() + " / " + this.quiz.questions.length);
 			scoreHolder.appendChild(scoreText);
-			document.body.appendChild(scoreHolder);
+			this.questionHolder.appendChild(scoreHolder);
 		}
 	};
 
@@ -121,8 +155,14 @@
 				this.addQ(new Problem(quizJSON[i]));
 			};
 		},
-		saveChoice: function(choice) {
-			this.answerLog.push(choice);
+		saveChoice: function(questionNumber, choice) {
+			this.answerLog[questionNumber] = choice;
+		},
+		previousQ: function() {
+			this.activeQ -= 1;
+		},
+		hasPreviousQ: function() {
+			return this.activeQ > 0;
 		},
 		nextQ: function() {
 			this.activeQ += 1;

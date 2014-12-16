@@ -29,4 +29,14 @@ var tableSawQuiz = [
 		],
 		"correctAnswer": 3
 	},
+	{
+		"question": "If the cut requires your hand to be closer than ____ inches, you must use a push stick.",
+		"choices": [
+			"2",
+			"4",
+			"6",
+			"8"
+		],
+		"correctAnswer": 2
+	},
 ]
